@@ -16,13 +16,13 @@ import dateutil.parser
 from fake_useragent import UserAgent
 ua = UserAgent()
 
-VERSION = (0, 0, 1)
+VERSION = (0, 0, 2)
 __version__ = '.'.join(map(str, VERSION))
 
 DATE_PATTERN = re.compile('([0-9]+)\-([0-9]+)\-([0-9]+)')
 
 def clean_name(v):
-    return re.sub('[^a-zA-Z0-9_]+', '_', v)
+    return re.sub('[^a-zA-Z0-9_]+', '_', v.lower())
 
 def unquote(s):
     s = s.strip()
@@ -99,27 +99,43 @@ class Table(object):
     
     def __init__(self, element):
         self._element = element
+        
+        # First row in the <thead>
         self._header = None
+        
+        # All rows in the <thead>
+        self._header_list = []
+        
         self._header_is_th = False
         self._header_extra_columns = 0
     
     @property
     def headers(self):
+        found = False
         if not self._header:
-            rows = self._element.select('tr')
+            head_el = self._element.select('thead')
+            rows = (head_el or self._element).select('tr')
             for row in rows:
+                tmp_header = []
                 q = row.select('th')
                 if q:
+                    found = True
                     self._header = [_.get_text() for _ in q]
                     self._header_is_th = True
                     self._header_extra_columns = sum(int(_.get('colspan', 1)) - 1 for _ in q)
-                    break
+                    self._header_list.append([_.get_text() for _ in q])
+                    #break
                 q = row.select('td')
-                if q:
+                if q and not found:
                     self._header = [_.get_text() for _ in q]
                     self._header_is_th = False
                     break
         return [_.strip().replace('\n', ' ') for _ in self._header or []]
+    
+    @property
+    def header_list(self):
+        self.headers
+        return self._header_list
     
     @property
     def clean_headers(self):
@@ -200,25 +216,66 @@ class Table(object):
     @property
     def fingerprint(self):
         return set([_.strip().lower() for _ in self.headers])
+        
+    @property
+    def fingerprints(self):
+        return self.header_list
+    
+    def matches_fingerprint(self, other_fingerprint, select_matching=False):
+        """
+        Returns true if the given fingerprint matches at least one of the table's fingerprints.
+        Returns false otherwise.
+        """
+        for fingerprint in self.fingerprints:
+            matches = True
+#             print 'f0:', fingerprint
+#             print 'f1:', other_fingerprint
+            for part0, part1 in zip(fingerprint, other_fingerprint):
+#                 print 'parts:', part0, part1
+                if isinstance(part1, basestring):
+                    if part0.lower().strip() != part1.lower().strip():
+                        matches = False
+                        break
+                elif type(part1).__name__ == 'SRE_Pattern':
+                    if not part1.findall(part0):
+                        matches = False
+                        break
+                else:
+                    raise NotImplementedError, 'Unknown fingerprint part type: %s' % (part1,)
+            if matches:
+#                 print 'found!', other_fingerprint
+                if select_matching:
+                    self._header = fingerprint
+                return True
+        return False
     
     @classmethod
-    def from_url(cls, url, fingerprint=None):
+    def from_url(cls, url, fingerprint=None, raise_none=True):
         """
         url := The location to retrieve the raw HTML from
         fingerprint := A list of headers to use to filter tables.
             If given, only tables containing all these headers will be returned.
         """
         html = get(url=url)
-        return cls.from_html(html, fingerprint)
+        return cls.from_html(html, fingerprint, raise_none=raise_none)
 
     @classmethod
-    def from_html(cls, html, fingerprint=None):
+    def from_html(cls, html, fingerprint=None, raise_none=True):
         soup = BeautifulSoup(html, 'lxml')
-        tables = map(cls, soup.select('table[class~=wikitable]'))
+        tables = _tables = map(cls, soup.select('table[class~=wikitable]'))
+        
+        print 'tables:',len(tables)
+        for _t in tables:
+            print _t, 'headers:', _t.header_list
         
         if fingerprint:
-            fingerprint = set([_.strip().lower() for _ in fingerprint])
-            tables = [_t for _t in tables if _t.fingerprint.issuperset(fingerprint)]
+            tables = [_t for _t in tables if _t.matches_fingerprint(fingerprint, select_matching=True)]
+        
+        if not tables and raise_none:
+            raise Exception, 'No tables found matching fingerprint: %s\n\nOnly found:\n    %s' % (
+                fingerprint,
+                '\n    '.join([str(_t.fingerprint) for _t in _tables])
+            )
         
         return tables
         
