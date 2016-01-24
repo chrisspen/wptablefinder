@@ -32,5 +32,6 @@ Usage
     >>> print table.headers
     [u'Rank', u'Country (or dependent territory)', u'Population', u'Date', u'% of world population', u'Source']
     >>> for row in table:
+    ...  print row
     {u'% of world population': u'18.9%', u'Rank': u'1', u'Source': u'Official population clock', u'Country (or dependent territory)': u'China [ Note 2 ]', u'Date': datetime.datetime(2015, 8, 15, 0, 0), u'Population': u'1,371,520,000'}
     ...

@@ -250,23 +250,24 @@ class Table(object):
         return False
     
     @classmethod
-    def from_url(cls, url, fingerprint=None, raise_none=True):
+    def from_url(cls, url, fingerprint=None, raise_none=True, verbose=False):
         """
         url := The location to retrieve the raw HTML from
         fingerprint := A list of headers to use to filter tables.
             If given, only tables containing all these headers will be returned.
         """
         html = get(url=url)
-        return cls.from_html(html, fingerprint, raise_none=raise_none)
+        return cls.from_html(html, fingerprint, raise_none=raise_none, verbose=verbose)
 
     @classmethod
-    def from_html(cls, html, fingerprint=None, raise_none=True):
+    def from_html(cls, html, fingerprint=None, raise_none=True, verbose=False):
         soup = BeautifulSoup(html, 'lxml')
         tables = _tables = map(cls, soup.select('table[class~=wikitable]'))
         
-        print 'tables:',len(tables)
-        for _t in tables:
-            print _t, 'headers:', _t.header_list
+        if verbose:
+            print 'tables:',len(tables)
+            for _t in tables:
+                print _t, 'headers:', _t.header_list
         
         if fingerprint:
             tables = [_t for _t in tables if _t.matches_fingerprint(fingerprint, select_matching=True)]
