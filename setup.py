@@ -34,7 +34,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     install_requires = [
-        'fake_useragent>=0.0.7',
+        'fake_useragent>=0.0.8',
         'beautifulsoup4>=4.4.0',
         'lxml>=3.4.4',
         #'cssselect>=0.9.1',
