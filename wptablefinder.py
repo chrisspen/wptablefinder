@@ -8,13 +8,14 @@ import collections
 import time
 from datetime import date
 
-from bs4 import BeautifulSoup
-#import lxml.html
-
-import dateutil.parser
-
-from fake_useragent import UserAgent
-ua = UserAgent()
+try:
+    from bs4 import BeautifulSoup
+    #import lxml.html
+    import dateutil.parser
+    from fake_useragent import UserAgent
+    ua = UserAgent()
+except ImportError:
+    pass
 
 VERSION = (0, 0, 2)
 __version__ = '.'.join(map(str, VERSION))
