@@ -17,7 +17,7 @@ try:
 except ImportError:
     pass
 
-VERSION = (0, 0, 2)
+VERSION = (0, 0, 3)
 __version__ = '.'.join(map(str, VERSION))
 
 DATE_PATTERN = re.compile('([0-9]+)\-([0-9]+)\-([0-9]+)')
@@ -216,7 +216,7 @@ class Table(object):
     
     @property
     def fingerprint(self):
-        return set([_.strip().lower() for _ in self.headers])
+        return set(_.strip().lower().replace('\n', ' ') for _ in self.headers)
         
     @property
     def fingerprints(self):
@@ -228,10 +228,11 @@ class Table(object):
         Returns false otherwise.
         """
         for fingerprint in self.fingerprints:
+            fingerprint = [_.lower().strip().replace('\n', ' ') for _ in fingerprint]
             matches = True
-#             print 'f0:', fingerprint
-#             print 'f1:', other_fingerprint
-            for part0, part1 in zip(fingerprint, other_fingerprint):
+#             print 'f0:', sorted(other_fingerprint)
+#             print 'f1:', sorted(fingerprint)
+            for part0, part1 in zip(sorted(set(fingerprint)), sorted(set(other_fingerprint))):
 #                 print 'parts:', part0, part1
                 if isinstance(part1, basestring):
                     if part0.lower().strip() != part1.lower().strip():
